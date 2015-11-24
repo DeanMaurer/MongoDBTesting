@@ -21,9 +21,9 @@ namespace TestMongoDB
             _client = new MongoClient();
             _database = _client.GetDatabase("test");
 
-            CompareCountMethods();
+            //CompareCountMethods();
 
-            //BackupDbToFile();
+            BackupDbToFile();
 
             Console.WriteLine("Press any key to continue");
             Console.ReadKey();
@@ -33,7 +33,7 @@ namespace TestMongoDB
         {
             var sw = new Stopwatch();
             sw.Start();
-            var s = WriteCollectionToFile(_database, "restaurants", "c:\\test\\backup.json");
+            var s = WriteCollectionToFile(_database, "restaurants", ".\\backup.json");
             s.Wait();
             sw.Stop();
             Console.WriteLine("Output to file took {0} seconds", sw.ElapsedMilliseconds / 1000);
