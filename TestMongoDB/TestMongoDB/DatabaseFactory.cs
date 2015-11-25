@@ -13,7 +13,7 @@ namespace TestMongoDB
     {
         private IMongoClient _client;
         private IMongoDatabase _database;
-        internal IMongoCollection<BsonDocument> Collection;
+        private IMongoCollection<BsonDocument> _collection;
         private const int _recordsToCreate = 1000;
         private const string _collectionName = "Scans";
         private const string _databaseName = "ScansDB";
@@ -59,12 +59,12 @@ namespace TestMongoDB
 
         private async Task CreateDocumentCollection()
         {
-            Collection = _database.GetCollection<BsonDocument>(_collectionName);
+            _collection = _database.GetCollection<BsonDocument>(_collectionName);
             var options = new CreateIndexOptions();
             options.Sparse = true;
             options.Unique = true;
 
-            Collection.Indexes.CreateOneAsync(GetIndexDefinition(), options);
+            _collection.Indexes.CreateOneAsync(GetIndexDefinition(), options);
 
             await LogIndexes();
 
@@ -73,7 +73,7 @@ namespace TestMongoDB
 
         private async Task LogIndexes()
         {
-            using (var cursor = await Collection.Indexes.ListAsync())
+            using (var cursor = await _collection.Indexes.ListAsync())
             {
                 var indexes = await cursor.ToListAsync();
 
@@ -93,39 +93,72 @@ namespace TestMongoDB
 
         private async Task CreateDocuments()
         {
-            for (int i = 1; i <= _recordsToCreate; i++)
+            for (int record = 1; record <= _recordsToCreate; record++)
             {
-                var document = CreateDocument(10014, i);
-                await Collection.InsertOneAsync(document);
-                LogRecordCreationPercentComplete(i);
+                var document = CreateDocument(10014, record, DateTime.UtcNow);
+                await _collection.InsertOneAsync(document);
+                LogRecordCreationPercentComplete(record);
             }
 
-            RowsInserted = Collection.CountAsync(new BsonDocument()).Result;
+            RowsInserted = _collection.CountAsync(new BsonDocument()).Result;
         }
 
-        private BsonDocument CreateDocument(int stationId, int sessionId)
+        private BsonDocument CreateDocument(int stationId, int sessionId, DateTime time)
         {
             var document = new BsonDocument
             {
                 { "Ingress", new BsonDocument
                     {
-                        { "Time", DateTime.UtcNow },
+                        { "Time", time },
                         { "StationId", stationId },
                         { "SessionId", sessionId }
-
                     }
                 }
             };
             return document;
         }
 
-        private static void LogRecordCreationPercentComplete(int i)
+        private static void LogRecordCreationPercentComplete(int lastRecordCreated)
         {
-            if (i % (_recordsToCreate / 10) == 0)
+            if (LastRecordCreatedIsMultipleOfTen(lastRecordCreated))
             {
-                double percentComplete = ((double)i / _recordsToCreate) * 100;
+                double percentComplete = ((double)lastRecordCreated / _recordsToCreate) * 100;
                 Console.WriteLine("ScansDB is {0}% complete.", percentComplete);
             }
+        }
+
+        private static bool LastRecordCreatedIsMultipleOfTen(int lastRecordCreated)
+        {
+            return lastRecordCreated % (_recordsToCreate / 10) == 0;
+        }
+
+        internal void InsertDuplicateRecord()
+        {
+            var t = InsertDuplicateRecordAsync();
+            t.Wait();
+        }
+
+        private async Task InsertDuplicateRecordAsync()
+        {
+            var document = GetFirstRecordAsync();
+            await _collection.InsertOneAsync(document.Result);
+        }
+
+        internal string GetFirstRecord()
+        {
+            var recordThread = GetFirstRecordAsync();
+            recordThread.Wait();
+            return recordThread.Result.ToString();
+        }
+
+        private async Task<BsonDocument> GetFirstRecordAsync()
+        {
+            return _collection.Find(new BsonDocument()).FirstAsync().Result;
+        }
+
+        internal void WriteCollectionToFile()
+        {
+            CollectionToFileWriter.WriteCollectionToFile(_collectionName, _databaseName);
         }
     }
 }
