@@ -14,77 +14,16 @@ namespace TestMongoDB
     {
 
         protected static IMongoClient _client;
-        protected static IMongoDatabase _database;
 
         static void Main(string[] args)
         {
             _client = new MongoClient();
-            _database = _client.GetDatabase("test");
 
-            //CompareCountMethods();
-
-            BackupDbToFile();
+            var t = BuildDatabase();
+            t.Wait();
 
             Console.WriteLine("Press any key to continue");
             Console.ReadKey();
-        }
-
-        private static void BackupDbToFile()
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-            var s = WriteCollectionToFile(_database, "restaurants", ".\\backup.json");
-            s.Wait();
-            sw.Stop();
-            Console.WriteLine("Output to file took {0} seconds", sw.ElapsedMilliseconds / 1000);
-        }
-
-        static void CompareCountMethods()
-        {
-            var filter = Builders<BsonDocument>.Filter.Eq("address.zipcode", "10075");
-
-            var sw = new Stopwatch();
-            sw.Start();
-            var t = CountMongoMethod(filter);
-            t.Wait();
-            sw.Stop();
-            Console.WriteLine("Time for Mongo Method: {0}", sw.ElapsedMilliseconds);
-
-            var ss = new Stopwatch();
-            ss.Start();
-            var x = CountCustomMethod(filter);
-            x.Wait();
-            ss.Stop();
-            Console.WriteLine("Time for Custom Method: {0}", ss.ElapsedMilliseconds);
-        }
-
-        static async Task CountMongoMethod(FilterDefinition<BsonDocument> filter)
-        {
-            var collection = _database.GetCollection<BsonDocument>("restaurants");
-            
-            var count = collection.CountAsync(filter);
-
-            Console.WriteLine("The number of documents is: {0}", count.Result);
-        }
-
-        static async Task CountCustomMethod(FilterDefinition<BsonDocument> filter)
-        {
-            var collection = _database.GetCollection<BsonDocument>("restaurants");
-            int count = 0;
-
-            using (var cursor = await collection.FindAsync(filter))
-            {
-                while (await cursor.MoveNextAsync())
-                {
-                    var batch = cursor.Current;
-                    foreach (var document in batch)
-                    {
-                        // process document
-                        count++;
-                    }
-                }
-            }
-            Console.WriteLine("The number of documents is: {0}", count);
         }
 
         public static async Task WriteCollectionToFile(IMongoDatabase database, string collectionName, string fileName)
@@ -105,6 +44,48 @@ namespace TestMongoDB
                     }
                 }
             }
+        }
+
+        public static async Task BuildDatabase()
+        {
+            var t = _client.DropDatabaseAsync("ScanDB");
+            t.Wait();
+            var db = _client.GetDatabase("ScanDB");
+            var collection = db.GetCollection<BsonDocument>("Scans");
+
+            var sw = new Stopwatch();
+            sw.Start();
+            for (int i = 1; i <= 10000; i++)
+            {
+                var document = CreateDocument(10014, i);
+                await collection.InsertOneAsync(document);
+                if (i % 1000 == 0)
+                {
+                    double percentComplete = ((double)i / 10000) * 100;
+                    Console.WriteLine("ScansDB is {0}% complete.", percentComplete);
+                }
+            }
+            sw.Stop();
+
+            Console.WriteLine("Inserted {0} rows", collection.CountAsync(new BsonDocument()).Result);
+            Console.WriteLine("The first record is: {0}", collection.Find(new BsonDocument()).FirstAsync().Result);
+            Console.WriteLine("Inserting {0} records took {1} seconds", collection.CountAsync(new BsonDocument()).Result, sw.ElapsedMilliseconds / 1000);
+        }
+
+        private static BsonDocument CreateDocument(int stationId, int sessionId)
+        {
+            var document = new BsonDocument
+            {
+                { "ingress", new BsonDocument
+                    {
+                        { "Time", DateTime.UtcNow },
+                        { "StationId", stationId },
+                        { "SessionId", sessionId }
+
+                    }
+                }
+            };
+            return document;
         }
 
     }
