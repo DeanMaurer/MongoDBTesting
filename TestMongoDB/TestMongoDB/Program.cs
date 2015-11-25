@@ -16,11 +16,13 @@ namespace TestMongoDB
         static void Main(string[] args)
         {
             var db = DatabaseFactory.GetPopulatedDatabase();
-            var cm = new CollectionManager(db.Collection);
-
-
             Console.WriteLine("Inserted {0} rows.", db.RowsInserted);
             Console.WriteLine("It took {0} seconds to create and populate the database.", db.MillisecondsToCreateDatabase / 1000);
+
+
+            var cm = new CollectionManager(db.Collection);
+            Console.WriteLine("The first record is: {0}", cm.GetFirstRecord());
+
 
             Console.WriteLine("Press any key to continue");
             Console.ReadKey();

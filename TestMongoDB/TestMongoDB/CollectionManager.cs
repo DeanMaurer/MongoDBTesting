@@ -17,10 +17,11 @@ namespace TestMongoDB
             _collection = mongoCollection;
         }
 
-        internal GetFirstRecord()
+        internal string GetFirstRecord()
         {
-            
-            return _collection.FindAsync()
+            var t = _collection.Find(new BsonDocument()).FirstAsync();
+            t.Wait();
+            return t.Result.ToString();
         }
     }
 }

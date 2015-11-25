@@ -13,11 +13,11 @@ namespace TestMongoDB
     {
         private IMongoClient _client;
         private IMongoDatabase _database;
-        private const int _recordsToCreate = 10000;
+        internal IMongoCollection<BsonDocument> Collection;
+        private const int _recordsToCreate = 1000;
         private const string _collectionName = "Scans";
         private const string _databaseName = "ScansDB";
 
-        internal IMongoCollection<BsonDocument> Collection;
         internal long MillisecondsToCreateDatabase = 0;
         internal long RowsInserted = 0;
 
@@ -60,8 +60,30 @@ namespace TestMongoDB
         private async Task CreateDocumentCollection()
         {
             Collection = _database.GetCollection<BsonDocument>(_collectionName);
-            Collection.Indexes.CreateOneAsync(GetIndexDefinition());
+            var options = new CreateIndexOptions();
+            options.Sparse = true;
+            options.Unique = true;
+
+            Collection.Indexes.CreateOneAsync(GetIndexDefinition(), options);
+
+            await LogIndexes();
+
             await CreateDocuments();
+        }
+
+        private async Task LogIndexes()
+        {
+            using (var cursor = await Collection.Indexes.ListAsync())
+            {
+                var indexes = await cursor.ToListAsync();
+
+                int i = 0;
+                foreach (var index in indexes)
+                {
+                    i++;
+                    Console.WriteLine("Index Number {0} is: {1}", i, index);
+                }
+            }
         }
 
         private IndexKeysDefinition<BsonDocument> GetIndexDefinition()
@@ -94,7 +116,7 @@ namespace TestMongoDB
                     }
                 }
             };
-                            return document;
+            return document;
         }
 
         private static void LogRecordCreationPercentComplete(int i)
