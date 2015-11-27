@@ -19,14 +19,13 @@ namespace TestMongoDB
             Console.WriteLine("Inserted {0} rows.", db.RowsInserted);
             Console.WriteLine("It took {0} seconds to create and populate the database.", db.MillisecondsToCreateDatabase / 1000);
             Console.WriteLine();
-            Console.WriteLine("The first record is: {0}", db.GetFirstRecord());
+            //Console.WriteLine("The first record is: {0}", db.GetFirstRecord());
 
-            LogDuplicateRecordInsertionFailure(db);
+            //LogDuplicateRecordInsertionFailure(db);
 
-            Console.WriteLine();
-            Console.WriteLine("Writing the database's collection to a file.");
-            Console.WriteLine("This may take a few minutes.");
-            db.WriteCollectionToFile();
+            Console.WriteLine("Updating half the documents.");
+            db.UpdateSomeDocuments();
+            Console.WriteLine("{0} documents were updated.", db.GetNumberOfUpdatedDocuments());
 
             WaitForUserToCloseConsole();
         }        

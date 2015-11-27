@@ -14,7 +14,7 @@ namespace TestMongoDB
         private IMongoClient _client;
         private IMongoDatabase _database;
         private IMongoCollection<BsonDocument> _collection;
-        private const int _recordsToCreate = 1000;
+        private const int _recordsToCreate = 10000;
         private const string _collectionName = "Scans";
         private const string _databaseName = "ScansDB";
 
@@ -66,7 +66,7 @@ namespace TestMongoDB
 
             _collection.Indexes.CreateOneAsync(GetIndexDefinition(), options);
 
-            await LogIndexes();
+            //await LogIndexes();
 
             await CreateDocuments();
         }
@@ -159,6 +159,58 @@ namespace TestMongoDB
         internal void WriteCollectionToFile()
         {
             CollectionToFileWriter.WriteCollectionToFile(_collectionName, _databaseName);
+        }
+
+        internal long UpdateSomeDocuments()
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            var t = UpdateSomeDocumentsAsync();
+            t.Wait();
+            sw.Stop();
+            return sw.ElapsedMilliseconds;
+        }
+
+        private async Task UpdateSomeDocumentsAsync()
+        {
+            var filter = Builders<BsonDocument>.Filter.Exists("UpdateSome", false);
+            var update = Builders<BsonDocument>.Update.Set("UpdateSome", true);
+
+            for(int i = 0; i < (_recordsToCreate / 2); i++)
+                await _collection.UpdateOneAsync(filter, update);
+        }
+
+        internal long UpdateAllDocumentsUpdateMany()
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            var t = UpdateAllDocumentsUpdateManyAsync();
+            t.Wait();
+            sw.Stop();
+            return sw.ElapsedMilliseconds;
+        }
+
+        private async Task UpdateAllDocumentsUpdateManyAsync()
+        {
+            var filter = Builders<BsonDocument>.Filter.Exists("UpdateAll", false);
+            var update = Builders<BsonDocument>.Update.Set("UpdateAll", true);
+
+            var result = await _collection.UpdateManyAsync(filter, update);
+        }
+
+        internal long GetNumberOfUpdatedDocuments()
+        {
+            var t = GetNumberOfUpdatedDocumentsAsync();
+            t.Wait();
+            return t.Result;
+        }
+
+        private async Task<int> GetNumberOfUpdatedDocumentsAsync()
+        {
+            var filter = Builders<BsonDocument>.Filter.Exists("UpdateSome", true);
+            var result = await _collection.FindAsync(filter);
+            var list = await result.ToListAsync();
+            return list.Count;
         }
     }
 }
