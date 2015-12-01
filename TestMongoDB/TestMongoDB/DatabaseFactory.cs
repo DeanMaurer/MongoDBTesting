@@ -14,7 +14,7 @@ namespace TestMongoDB
         private IMongoClient _client;
         private IMongoDatabase _database;
         private IMongoCollection<BsonDocument> _collection;
-        private const int _recordsToCreate = 10000;
+        private const int _recordsToCreate = 1000;
         private const string _collectionName = "Scans";
         private const string _databaseName = "ScansDB";
 
@@ -31,7 +31,15 @@ namespace TestMongoDB
 
         private DatabaseFactory()
         {
-            _client = new MongoClient();
+            var servers = new List<MongoServerAddress>();
+            servers.Add(new MongoServerAddress("localhost", 11233));
+            servers.Add(new MongoServerAddress("localhost", 22344));
+            servers.Add(new MongoServerAddress("localhost", 33455));
+            
+            var settings = new MongoClientSettings();
+
+            settings.Servers = servers;
+            _client = new MongoClient(settings);
             _database = CreateDatabase();
         }
 
